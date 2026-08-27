@@ -99,7 +99,13 @@ cp "$HERE/profile/statusline.sh" "$HERE/profile/statusline.py" "$HOME/.claude/"
 chmod +x "$HOME/.claude/statusline.sh"
 cp -R "$HERE/profile/skills/." "$HOME/.claude/skills/"
 ok "правила установлены (~/.claude/CLAUDE.md)"
-ok "скиллов установлено: $(ls -1 "$HOME/.claude/skills" | wc -l | tr -d ' ')"
+# Проверяем не «сколько папок легло», а сколько скиллов реально читаются
+GOOD=0; BAD=0
+for e in "$HOME/.claude/skills"/*; do
+  if [ -f "$e/SKILL.md" ]; then GOOD=$((GOOD+1)); else BAD=$((BAD+1)); fi
+done
+ok "скиллов рабочих: $GOOD"
+[ "$BAD" -gt 0 ] && warn "скиллов повреждено: $BAD (скачай пакет заново и запусти скрипт ещё раз)"
 
 say "Шаг 8/9. Плагины Claude Code"
 add_market() { claude plugin marketplace add "$1" >/dev/null 2>&1 && ok "маркетплейс $1" || warn "маркетплейс $1 не добавился"; }

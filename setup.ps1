@@ -72,7 +72,12 @@ Copy-Item (Join-Path $Here 'profile\CLAUDE.md')         (Join-Path $Cl 'CLAUDE.m
 Copy-Item (Join-Path $Here 'profile\settings.win.json') (Join-Path $Cl 'settings.json') -Force
 Copy-Item (Join-Path $Here 'profile\skills\*') (Join-Path $Cl 'skills') -Recurse -Force
 Ok 'правила установлены'
-Ok ("скиллов установлено: " + (Get-ChildItem (Join-Path $Cl 'skills') -Directory).Count)
+$Good = 0; $Bad = 0
+Get-ChildItem (Join-Path $Cl 'skills') -Directory | ForEach-Object {
+  if (Test-Path (Join-Path $_.FullName 'SKILL.md')) { $Good++ } else { $Bad++ }
+}
+Ok "скиллов рабочих: $Good"
+if ($Bad -gt 0) { Warn "скиллов повреждено: $Bad (скачай пакет заново и запусти скрипт ещё раз)" }
 
 Say 'Шаг 7/8. Плагины Claude Code'
 if (Have 'claude') {
