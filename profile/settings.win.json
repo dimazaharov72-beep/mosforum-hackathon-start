@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Agent(*)",
+      "Workflow",
+      "WebSearch",
+      "WebFetch",
+      "Skill",
+      "Artifact",
+      "mcp__claude-in-chrome",
+      "mcp__plugin_playwright_playwright"
+    ]
+  },
+  "model": "opus[1m]",
+  "theme": "light",
+  "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "playwright@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      }
+    }
+  }
+}

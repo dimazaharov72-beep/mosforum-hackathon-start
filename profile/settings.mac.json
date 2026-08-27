@@ -1,0 +1,65 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Agent(*)",
+      "Workflow",
+      "WebSearch",
+      "WebFetch",
+      "Skill",
+      "Artifact",
+      "mcp__claude-in-chrome",
+      "mcp__plugin_playwright_playwright"
+    ]
+  },
+  "model": "opus[1m]",
+  "theme": "light",
+  "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "afplay /System/Library/Sounds/Glass.aiff", "async": true },
+          { "type": "command", "command": "[ ! -f \"$HOME/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"$HOME/.claude/skills/impeccable/scripts/hook.mjs\"", "timeout": 30, "statusMessage": "Design deep pass" }
+        ]
+      }
+    ],
+    "Notification": [
+      { "hooks": [ { "type": "command", "command": "afplay /System/Library/Sounds/Funk.aiff", "async": true } ] }
+    ],
+    "PostToolUseFailure": [
+      { "hooks": [ { "type": "command", "command": "afplay /System/Library/Sounds/Basso.aiff", "async": true } ] }
+    ],
+    "TaskCompleted": [
+      { "hooks": [ { "type": "command", "command": "afplay /System/Library/Sounds/Hero.aiff", "async": true } ] }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "[ ! -f \"$HOME/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"$HOME/.claude/skills/impeccable/scripts/hook.mjs\"", "timeout": 5, "statusMessage": "Checking UI changes" }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "$HOME/.claude/statusline.sh",
+    "padding": 0
+  },
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "playwright@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "superpowers-marketplace": {
+      "source": { "source": "github", "repo": "obra/superpowers-marketplace" }
+    }
+  }
+}
