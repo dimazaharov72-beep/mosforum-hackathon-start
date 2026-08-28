@@ -63,6 +63,9 @@ fi
 have git  && ok "git $(git --version | awk '{print $3}')"       || warn "git не установился"
 have gh   && ok "gh $(gh --version | head -1 | awk '{print $3}')" || warn "gh не установился"
 have node && ok "node $(node -v)"                                 || warn "Node.js не установился"
+if have codex; then ok "codex $(codex --version 2>/dev/null | awk '{print $2}')"
+elif have npm; then npm install -g @openai/codex >/dev/null 2>&1 && ok "codex установлен" || warn "codex не установился (доставим командой /codex:setup)"
+fi
 case "$(node -v 2>/dev/null)" in v22.*) : ;; *) warn "нужна Node.js 22, а стоит $(node -v 2>/dev/null || echo 'ничего')";; esac
 
 say "Шаг 4/9. Редактор Cursor"
@@ -112,14 +115,14 @@ add_market() { claude plugin marketplace add "$1" >/dev/null 2>&1 && ok "мар�
 inst()       { claude plugin install "$1" -y --scope user >/dev/null 2>&1 && ok "плагин $1" || warn "плагин $1 не встал (можно доставить командой /plugin в Claude Code)"; }
 if have claude; then
   add_market "obra/superpowers-marketplace"
+  add_market "openai/codex-plugin-cc"
   inst "superpowers@superpowers-marketplace"
   inst "playwright@claude-plugins-official"
+  inst "codex@openai-codex"
   if [ "$FULL" = 1 ]; then
     add_market "mukul975/Anthropic-Cybersecurity-Skills"
-    add_market "openai/codex-plugin-cc"
     inst "figma@claude-plugins-official"
     inst "cybersecurity-skills@anthropic-cybersecurity-skills"
-    inst "codex@openai-codex"
   fi
 else warn "Claude Code недоступен — плагины поставятся сами при первом запуске из настроек"
 fi
@@ -162,6 +165,8 @@ cat <<'FIN'
   2. Открой в Cursor терминал и набери:  claude
   3. Claude покажет ссылку для входа — СКОПИРУЙ её и пришли Дмитрию в чат.
      Сам по ссылке не переходи. Он активирует со своей подписки.
-  4. Когда Дмитрий напишет «активировал» — вставь в Claude Code промпт
+  4. Там же набери:  codex login --device-auth
+     Он покажет ссылку и короткий код — пришли код Дмитрию тем же способом.
+  5. Когда Дмитрий подтвердит оба входа — вставь в Claude Code промпт
      из файла PROMPT.md (он рядом с этим скриптом).
 FIN

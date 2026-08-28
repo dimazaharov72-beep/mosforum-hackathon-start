@@ -41,6 +41,9 @@ if (Have 'gh')  { Ok "gh уже стоит" }  else { Install-App 'GitHub.cli' '
 if (Have 'node') { Ok "node уже стоит ($(node -v))" } else { Install-App 'OpenJS.NodeJS.LTS' 'Node.js LTS' }
 Refresh-Path
 if (Have 'node') { if ((node -v) -notlike 'v22.*') { Warn "нужна Node.js 22, а стоит $(node -v) - скажи об этом Claude Code" } }
+if (Have 'codex') { Ok 'codex уже стоит' }
+elseif (Have 'npm') { npm install -g @openai/codex 2>&1 | Out-Null; Refresh-Path; Ok 'codex установлен' }
+else { Warn 'codex не установился (доставим командой /codex:setup)' }
 
 Say 'Шаг 3/8. Редактор Cursor'
 if ($NoCursor) { Ok 'пропущено по флагу' }
@@ -82,13 +85,13 @@ if ($Bad -gt 0) { Warn "скиллов повреждено: $Bad (скачай 
 Say 'Шаг 7/8. Плагины Claude Code'
 if (Have 'claude') {
   claude plugin marketplace add obra/superpowers-marketplace 2>&1 | Out-Null
-  foreach ($p in @('superpowers@superpowers-marketplace','playwright@claude-plugins-official')) {
+  claude plugin marketplace add openai/codex-plugin-cc 2>&1 | Out-Null
+  foreach ($p in @('superpowers@superpowers-marketplace','playwright@claude-plugins-official','codex@openai-codex')) {
     claude plugin install $p -y --scope user 2>&1 | Out-Null; Ok "плагин $p"
   }
   if ($Full) {
     claude plugin marketplace add mukul975/Anthropic-Cybersecurity-Skills 2>&1 | Out-Null
-    claude plugin marketplace add openai/codex-plugin-cc 2>&1 | Out-Null
-    foreach ($p in @('figma@claude-plugins-official','cybersecurity-skills@anthropic-cybersecurity-skills','codex@openai-codex')) {
+    foreach ($p in @('figma@claude-plugins-official','cybersecurity-skills@anthropic-cybersecurity-skills')) {
       claude plugin install $p -y --scope user 2>&1 | Out-Null; Ok "плагин $p"
     }
   }
@@ -134,7 +137,9 @@ else {
   2. Открой в Cursor терминал и набери:  claude
   3. Claude покажет ссылку для входа - СКОПИРУЙ её и пришли Дмитрию в чат.
      Сам по ссылке не переходи. Он активирует со своей подписки.
-  4. Когда Дмитрий напишет «активировал» - вставь в Claude Code промпт
+  4. Там же набери:  codex login --device-auth
+     Он покажет ссылку и короткий код - пришли код Дмитрию тем же способом.
+  5. Когда Дмитрий подтвердит оба входа - вставь в Claude Code промпт
      из файла PROMPT.md (он рядом с этим скриптом).
 
 Примечание: на Windows не ставятся звуковые уведомления и статус-строка -

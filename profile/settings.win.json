@@ -23,13 +23,20 @@
   "skipWorkflowUsageWarning": true,
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true,
-    "playwright@claude-plugins-official": true
+    "playwright@claude-plugins-official": true,
+    "codex@openai-codex": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
       "source": {
         "source": "github",
         "repo": "obra/superpowers-marketplace"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
       }
     }
   }
