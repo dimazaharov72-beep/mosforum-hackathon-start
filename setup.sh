@@ -2,7 +2,9 @@
 # =============================================================================
 # Хакатон МосФорум — настройка рабочего места (macOS)
 # Запуск:  bash setup.sh
-# Флаги:   --full        поставить и дополнительные плагины (figma, codex, кибербез)
+# Флаги:   --office      офисный режим: Excel, Word, PDF без среды разработки
+#                        (без Docker, Codex, GitHub и кода проектов)
+#          --full        поставить и дополнительные плагины (figma, кибербез)
 #          --no-docker   не ставить Docker Desktop (это ~2 ГБ и долго)
 #          --no-cursor   не ставить редактор Cursor
 #          --no-clone    не скачивать репозитории
@@ -10,8 +12,9 @@
 # =============================================================================
 set -uo pipefail
 
-FULL=0; DO_DOCKER=1; DO_CURSOR=1; DO_CLONE=1
+FULL=0; OFFICE=0; DO_DOCKER=1; DO_CURSOR=1; DO_CLONE=1
 for a in "$@"; do case "$a" in
+  --office) OFFICE=1; DO_DOCKER=0; DO_CLONE=0;;
   --full) FULL=1;; --no-docker) DO_DOCKER=0;; --no-cursor) DO_CURSOR=0;; --no-clone) DO_CLONE=0;;
   *) echo "Неизвестный флаг: $a"; exit 1;;
 esac; done
@@ -54,16 +57,20 @@ if have brew && ! grep -q 'brew shellenv' "$HOME/.zprofile" 2>/dev/null; then
 fi
 
 say "Шаг 3/9. git, gh, Node.js 22, jq"
-have brew && brew install --quiet git gh jq node@22 >/dev/null 2>&1
+if [ "$OFFICE" = 1 ]; then BREW_PKGS=(git jq node@22); else BREW_PKGS=(git gh jq node@22); fi
+have brew && brew install --quiet "${BREW_PKGS[@]}" >/dev/null 2>&1
 if have brew; then brew link --overwrite --force node@22 >/dev/null 2>&1 || true; fi
 export PATH="$(brew --prefix 2>/dev/null)/opt/node@22/bin:$PATH"
 if ! grep -q 'opt/node@22/bin' "$HOME/.zprofile" 2>/dev/null && have brew; then
   echo "export PATH=\"$(brew --prefix)/opt/node@22/bin:\$PATH\"" >> "$HOME/.zprofile"
 fi
 have git  && ok "git $(git --version | awk '{print $3}')"       || warn "git не установился"
-have gh   && ok "gh $(gh --version | head -1 | awk '{print $3}')" || warn "gh не установился"
+if [ "$OFFICE" = 0 ]; then
+  have gh && ok "gh $(gh --version | head -1 | awk '{print $3}')" || warn "gh не установился"
+fi
 have node && ok "node $(node -v)"                                 || warn "Node.js не установился"
-if have codex; then ok "codex $(codex --version 2>/dev/null | awk '{print $2}')"
+if [ "$OFFICE" = 1 ]; then :
+elif have codex; then ok "codex $(codex --version 2>/dev/null | awk '{print $2}')"
 elif have npm; then npm install -g @openai/codex >/dev/null 2>&1 && ok "codex установлен" || warn "codex не установился (доставим командой /codex:setup)"
 fi
 case "$(node -v 2>/dev/null)" in v22.*) : ;; *) warn "нужна Node.js 22, а стоит $(node -v 2>/dev/null || echo 'ничего')";; esac
@@ -96,11 +103,20 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 for f in CLAUDE.md settings.json; do
   [ -f "$HOME/.claude/$f" ] && cp "$HOME/.claude/$f" "$HOME/.claude/$f.бэкап-$STAMP" && ok "старый $f сохранён рядом как $f.бэкап-$STAMP"
 done
-cp "$HERE/profile/CLAUDE.md"        "$HOME/.claude/CLAUDE.md"
-cp "$HERE/profile/settings.mac.json" "$HOME/.claude/settings.json"
 cp "$HERE/profile/statusline.sh" "$HERE/profile/statusline.py" "$HOME/.claude/"
 chmod +x "$HOME/.claude/statusline.sh"
-cp -R "$HERE/profile/skills/." "$HOME/.claude/skills/"
+if [ "$OFFICE" = 1 ]; then
+  cp "$HERE/profile/CLAUDE.office.md"     "$HOME/.claude/CLAUDE.md"
+  cp "$HERE/profile/settings.office.json" "$HOME/.claude/settings.json"
+  # Только скиллы для документов - остальные про разработку и дизайн сайтов
+  for s in xlsx docx pdf pptx doc-coauthoring internal-comms; do
+    cp -R "$HERE/profile/skills/$s" "$HOME/.claude/skills/"
+  done
+else
+  cp "$HERE/profile/CLAUDE.md"        "$HOME/.claude/CLAUDE.md"
+  cp "$HERE/profile/settings.mac.json" "$HOME/.claude/settings.json"
+  cp -R "$HERE/profile/skills/." "$HOME/.claude/skills/"
+fi
 ok "правила установлены (~/.claude/CLAUDE.md)"
 # Проверяем не «сколько папок легло», а сколько скиллов реально читаются
 GOOD=0; BAD=0
@@ -115,11 +131,13 @@ add_market() { claude plugin marketplace add "$1" >/dev/null 2>&1 && ok "мар�
 inst()       { claude plugin install "$1" -y --scope user >/dev/null 2>&1 && ok "плагин $1" || warn "плагин $1 не встал (можно доставить командой /plugin в Claude Code)"; }
 if have claude; then
   add_market "obra/superpowers-marketplace"
-  add_market "openai/codex-plugin-cc"
   inst "superpowers@superpowers-marketplace"
-  inst "playwright@claude-plugins-official"
-  inst "codex@openai-codex"
-  if [ "$FULL" = 1 ]; then
+  if [ "$OFFICE" = 0 ]; then
+    add_market "openai/codex-plugin-cc"
+    inst "playwright@claude-plugins-official"
+    inst "codex@openai-codex"
+  fi
+  if [ "$FULL" = 1 ] && [ "$OFFICE" = 0 ]; then
     add_market "mukul975/Anthropic-Cybersecurity-Skills"
     inst "figma@claude-plugins-official"
     inst "cybersecurity-skills@anthropic-cybersecurity-skills"
@@ -127,8 +145,16 @@ if have claude; then
 else warn "Claude Code недоступен — плагины поставятся сами при первом запуске из настроек"
 fi
 
+if [ "$OFFICE" = 1 ]; then
+  say "Шаг 9/9. Офисные инструменты: LibreOffice, pandoc, PDF, распознавание"
+  bash "$HERE/office-tools.sh" || warn "офисные инструменты встали не все (подробности выше)"
+  mkdir -p "$HOME/Documents/Отчёты"
+  ok "рабочая папка: ~/Documents/Отчёты"
+else
 say "Шаг 9/9. GitHub и репозитории"
-if [ "$DO_CLONE" = 0 ]; then ok "пропущено по флагу"
+fi
+if [ "$OFFICE" = 1 ]; then :
+elif [ "$DO_CLONE" = 0 ]; then ok "пропущено по флагу"
 elif ! have gh; then warn "нет gh — репозитории не скачаны"
 else
   if ! gh auth status >/dev/null 2>&1; then
@@ -157,6 +183,16 @@ else
   printf "\033[1;33mГотово, но с замечаниями:\033[0m\n"
   for p in "${PROBLEMS[@]}"; do echo "  - $p"; done
   echo "  Скопируй этот список в чат с Claude Code — он починит."
+fi
+if [ "$OFFICE" = 1 ]; then cat <<'FIN'
+
+Что дальше:
+  1. Полностью закрой Cursor (Cmd+Q) и открой заново - чтобы он увидел новые программы.
+  2. File → Open Folder → Документы → Отчёты.
+  3. Открой терминал (Ctrl+`) и набери:  claude
+  4. Напиши Claude по-русски, что нужно сделать с документом.
+FIN
+exit 0
 fi
 cat <<'FIN'
 
