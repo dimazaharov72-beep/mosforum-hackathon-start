@@ -34,13 +34,49 @@ if [ "$(uname -s)" != "Darwin" ]; then
   echo "Это скрипт для Mac. На Windows запускай setup.ps1"; exit 1
 fi
 
+# Пароль от Mac спрашиваем системным окном, а не в терминале: так установку
+# может вести и человек, и Claude Code (у него нет терминала для ввода пароля).
+# Homebrew и sudo -A сами зовут этот помощник.
+export SUDO_ASKPASS="$HERE/askpass.sh"
+chmod +x "$SUDO_ASKPASS" 2>/dev/null || true
+
+# Инструменты считаем поставленными, только если git из них реально есть:
+# «xcode-select -p» бывает доволен и сломанной установкой.
+clt_ready() { [ -x /Library/Developer/CommandLineTools/usr/bin/git ] || [ -x "$(xcode-select -p 2>/dev/null)/usr/bin/git" ]; }
+
 say "Шаг 1/9. Инструменты командной строки Apple"
-if xcode-select -p >/dev/null 2>&1; then ok "уже стоят"
+if clt_ready; then ok "уже стоят"
 else
-  echo "  Сейчас откроется окно установки — нажми «Установить» и дождись конца."
-  xcode-select --install >/dev/null 2>&1 || true
-  until xcode-select -p >/dev/null 2>&1; do sleep 10; done
-  ok "поставлены"
+  # Путь 1 - тихо, через «Обновление ПО», как это делает сам Homebrew.
+  # Метка-файл заставляет softwareupdate показать инструменты в списке.
+  echo "  Ищу инструменты на серверах Apple (1-2 минуты). Может спросить пароль от Mac."
+  CLT_FLAG="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+  sudo -A touch "$CLT_FLAG" 2>/dev/null
+  CLT_LABEL="$(softwareupdate -l 2>/dev/null | grep -B 1 -E 'Command Line Tools' \
+    | awk -F'*' '/^ *\*/ {print $2}' | sed -e 's/^ *Label: //' -e 's/^ *//' | sort -V | tail -n1)"
+  if [ -n "$CLT_LABEL" ]; then
+    echo "  Ставлю «$CLT_LABEL» - это 5-15 минут, окон нажимать не нужно."
+    sudo -A softwareupdate -i "$CLT_LABEL" >/dev/null 2>&1
+    sudo -A xcode-select --switch /Library/Developer/CommandLineTools 2>/dev/null
+  fi
+  sudo -A rm -f "$CLT_FLAG" 2>/dev/null
+  # Путь 2 - окно Apple. Ждём не вечно: если Apple ответит «недоступно»,
+  # скрипт не должен висеть.
+  if ! clt_ready; then
+    echo "  Тихо не вышло. Сейчас откроется окно Apple - нажми «Установить» и дождись конца."
+    xcode-select --install >/dev/null 2>&1 || true
+    for _ in $(seq 1 180); do clt_ready && break; sleep 10; done
+  fi
+  if clt_ready; then ok "поставлены"
+  else
+    printf "\n  \033[1;31m✗ Инструменты Apple не поставились, без них дальше нельзя.\033[0m\n"
+    echo "  Последний путь - скачать вручную (нужен Apple ID, подойдёт личный):"
+    echo "    1. Открой https://developer.apple.com/download/all/?q=Command%20Line%20Tools"
+    echo "    2. Войди и скачай верхний «Command Line Tools for Xcode» (файл .dmg)."
+    echo "    3. Открой его, запусти установщик внутри, дождись конца."
+    echo "    4. Запусти эту же команду установки ещё раз - она продолжит с этого места."
+    exit 1
+  fi
 fi
 
 say "Шаг 2/9. Homebrew (менеджер программ)"
@@ -158,7 +194,8 @@ elif [ "$DO_CLONE" = 0 ]; then ok "пропущено по флагу"
 elif ! have gh; then warn "нет gh — репозитории не скачаны"
 else
   if ! gh auth status >/dev/null 2>&1; then
-    echo "  Сейчас откроется браузер для входа в GitHub. Выбирай: GitHub.com → HTTPS → Login with a web browser."
+    echo "  Вход в GitHub: ниже появится код из 8 знаков. Открой github.com/login/device, введи код, нажми Authorize."
+    [ -t 0 ] || open "https://github.com/login/device" 2>/dev/null
     gh auth login --hostname github.com --git-protocol https --web || warn "вход в GitHub не завершён"
   fi
   if gh auth status >/dev/null 2>&1; then
@@ -196,7 +233,7 @@ exit 0
 fi
 cat <<'FIN'
 
-Что дальше:
+Если установку вёл Claude - он продолжит сам по START.md. Иначе:
   1. Открой Cursor → File → Open Folder → ~/hackathon/MosForum-DayTrack
   2. Открой в Cursor терминал и набери:  claude
   3. Claude покажет ссылку для входа — СКОПИРУЙ её и пришли Дмитрию в чат.
